@@ -1,6 +1,6 @@
 ---
 name: parcel-tracker
-description: Universal parcel/package tracking with automatic carrier detection. Use when the user wants to track shipments, add tracking numbers, check delivery status, or set up automatic tracking notifications. Triggers include phrases like "track package", "add tracking number", "check my parcel", "where is my order", "suivre un colis", "ajouter un numéro de suivi", "où est mon colis", "track my order", "list my parcels", "check tracking updates". Supports La Poste/Colissimo, Chronopost, Cainiao/AliExpress, UPS, FedEx, DHL, USPS, Royal Mail, DPD, GLS, Yanwen, and more. Uses FREE APIs only - no paid APIs required.
+description: Universal parcel/package tracking with automatic carrier detection. Use when the user wants to track shipments, add tracking numbers, check delivery status, or set up automatic tracking notifications. Triggers include phrases like "track package", "add tracking number", "check my parcel", "where is my order", "track my order", "list my parcels", "check tracking updates". Supports La Poste/Colissimo, Chronopost, Cainiao/AliExpress, UPS, FedEx, DHL, USPS, Royal Mail, DPD, GLS, Yanwen, and more. Uses FREE APIs only - no paid APIs required.
 metadata:
   {
     "openclaw":
@@ -129,22 +129,22 @@ openclaw cron add --name parcel-tracker --schedule "every 2 hours" \
 
 ```bash
 # Add an AliExpress order with alias
-$ python3 parcel-tracker/scripts/parcel_tracker.py add "CNFR9010481599571HD" "Chargeur USB"
-Added CNFR9010481599571HD [Chargeur USB] (Cainiao / AliExpress)
+$ python3 parcel-tracker/scripts/parcel_tracker.py add "CNFR9010481599571HD" "USB Charger"
+Added CNFR9010481599571HD [USB Charger] (Cainiao / AliExpress)
 
 # Add a GLS parcel
-$ python3 parcel-tracker/scripts/parcel_tracker.py add "12345678901" "Livre"
-Added 12345678901 [Livre] (GLS)
+$ python3 parcel-tracker/scripts/parcel_tracker.py add "12345678901" "Book"
+Added 12345678901 [Book] (GLS)
 
 # Add a DPD parcel
-$ python3 parcel-tracker/scripts/parcel_tracker.py add "12345678901234" "Cadeau"
-Added 12345678901234 [Cadeau] (DPD)
+$ python3 parcel-tracker/scripts/parcel_tracker.py add "12345678901234" "Gift"
+Added 12345678901234 [Gift] (DPD)
 
 # Check for updates (uses free APIs)
 $ python3 parcel-tracker/scripts/parcel_tracker.py check
 Found 1 update(s):
 
-📦 CNFR9010481599571HD [Chargeur USB] (Cainiao / AliExpress)
+📦 CNFR9010481599571HD [USB Charger] (Cainiao / AliExpress)
    Status: Delivering
    Event: Received by local delivery company
    Time: 2026-02-17 01:35:22
@@ -153,9 +153,9 @@ Found 1 update(s):
 $ python3 parcel-tracker/scripts/parcel_tracker.py list
 Tracking #             Alias        Carrier            Status         Last Update
 -----------------------------------------------------------------------------------
-12345678901            Livre        GLS                In transit     2026-02-17 10:30
-12345678901234         Cadeau       DPD                Delivered      2026-02-16 14:22
-CNFR9010481599571HD    Chargeur USB Cainiao / AliExpress Delivering   2026-02-17 01:35
+12345678901            Book         GLS                In transit     2026-02-17 10:30
+12345678901234         Gift         DPD                Delivered      2026-02-16 14:22
+CNFR9010481599571HD    USB Charger  Cainiao / AliExpress Delivering   2026-02-17 01:35
 ```
 
 ## How It Works
@@ -183,32 +183,32 @@ This skill is designed to be used directly from OpenClaw conversations. Use natu
 ### Adding a Parcel
 - "Add tracking number CNFR9010481599571HD"
 - "Track this package: 1Z999AA10123456784"
-- "Ajoute ce colis: 8L01234567890"
-- "Suivre le colis CJ123456789FR"
+- "Add parcel 8L01234567890"
+- "Track parcel CJ123456789FR"
 
 ### Adding with Alias
-- "Add tracking number CNFR9010481599571HD as Chargeur USB"
-- "Track this package 1Z999AA10123456784 - Cadeau Maman"
-- "Ajoute le colis 8L01234567890: Vêtements"
+- "Add tracking number CNFR9010481599571HD as USB Charger"
+- "Track this package 1Z999AA10123456784 - Mom's Gift"
+- "Add parcel 8L01234567890: Clothes"
 
 Aliases make it easier to identify parcels in the list view instead of just seeing tracking numbers.
 
 ### Checking Updates
 - "Check my parcels"
 - "Any updates on my tracking numbers?"
-- "Vérifier mes colis"
-- "Des nouvelles de mes colis ?"
+- "Check for parcel updates"
+- "Any news on my packages?"
 
 ### Listing Parcels
 - "List my tracked parcels"
 - "Show all my packages"
-- "Liste mes colis"
-- "Mes colis en cours"
+- "List my parcels"
+- "My ongoing deliveries"
 
 ### Removing a Parcel
 - "Remove tracking number CNFR9010481599571HD"
 - "Stop tracking 1Z999AA10123456784"
-- "Supprimer le colis CJ123456789FR"
+- "Remove parcel CJ123456789FR"
 
 ### Implementation
 
