@@ -38,6 +38,8 @@ python3 parcel-tracker/scripts/parcel_tracker.py detect <tracking_number>
 | **La Poste / Colissimo** | ✅ | ✅ | Official API (free) |
 | **Chronopost** | ✅ | ✅ | Official API (free) |
 | **Cainiao / AliExpress** | ✅ | ✅ | Public API (free) |
+| **GLS** | ✅ | ✅ | Official API (free) |
+| **DPD** | ✅ | ✅ | Official API (free) |
 | **Yanwen** | ✅ | 🟡 | Web tracking |
 | **Sunyou** | ✅ | 🟡 | Web tracking |
 | **4PX** | ✅ | 🟡 | Web tracking |
@@ -46,8 +48,6 @@ python3 parcel-tracker/scripts/parcel_tracker.py detect <tracking_number>
 | **DHL** | ✅ | 🔴 | Pattern only |
 | **USPS** | ✅ | 🔴 | Pattern only |
 | **Royal Mail** | ✅ | 🔴 | Pattern only |
-| **DPD** | ✅ | 🔴 | Pattern only |
-| **GLS** | ✅ | 🔴 | Pattern only |
 | **Evri (Hermes)** | ✅ | 🔴 | Pattern only |
 | **Mondial Relay** | ✅ | 🔴 | Pattern only |
 | **InPost** | ✅ | 🔴 | Pattern only |
@@ -94,9 +94,9 @@ openclaw cron add --name parcel-tracker --schedule "every 2 hours" \
 
 | Command | Description |
 |---------|-------------|
-| `add <tracking_number>` | Add a new parcel to tracking |
+| `add <tracking_number> [alias]` | Add a new parcel to tracking (with optional alias) |
 | `remove <tracking_number>` | Remove a parcel from tracking |
-| `list` | Show all tracked parcels with status |
+| `list` | Show all tracked parcels with status and aliases |
 | `check` | Check all parcels for new events |
 | `detect <tracking_number>` | Detect carrier from tracking number |
 | `track <tracking_number>` | One-time track (returns JSON) |
@@ -104,24 +104,34 @@ openclaw cron add --name parcel-tracker --schedule "every 2 hours" \
 ## Example Session
 
 ```bash
-# Add an AliExpress order
-$ python3 parcel-tracker/scripts/parcel_tracker.py add "CNFR9010481599571HD"
-Added CNFR9010481599571HD (Cainiao / AliExpress)
+# Add an AliExpress order with alias
+$ python3 parcel-tracker/scripts/parcel_tracker.py add "CNFR9010481599571HD" "Chargeur USB"
+Added CNFR9010481599571HD [Chargeur USB] (Cainiao / AliExpress)
 
-# Check for updates (uses free Cainiao API)
+# Add a GLS parcel
+$ python3 parcel-tracker/scripts/parcel_tracker.py add "12345678901" "Livre"
+Added 12345678901 [Livre] (GLS)
+
+# Add a DPD parcel
+$ python3 parcel-tracker/scripts/parcel_tracker.py add "12345678901234" "Cadeau"
+Added 12345678901234 [Cadeau] (DPD)
+
+# Check for updates (uses free APIs)
 $ python3 parcel-tracker/scripts/parcel_tracker.py check
 Found 1 update(s):
 
-📦 CNFR9010481599571HD (Cainiao / AliExpress)
+📦 CNFR9010481599571HD [Chargeur USB] (Cainiao / AliExpress)
    Status: Delivering
    Event: Received by local delivery company
    Time: 2026-02-17 01:35:22
 
 # List all parcels
 $ python3 parcel-tracker/scripts/parcel_tracker.py list
-Tracking #           Carrier              Status            Last Update
---------------------------------------------------------------------------
-CNFR9010481599571HD  Cainiao / AliExpress Delivering        2026-02-17 01:35:22
+Tracking #             Alias        Carrier            Status         Last Update
+-----------------------------------------------------------------------------------
+12345678901            Livre        GLS                In transit     2026-02-17 10:30
+12345678901234         Cadeau       DPD                Delivered      2026-02-16 14:22
+CNFR9010481599571HD    Chargeur USB Cainiao / AliExpress Delivering   2026-02-17 01:35
 ```
 
 ## How It Works
@@ -152,6 +162,13 @@ This skill is designed to be used directly from OpenClaw conversations. Use natu
 - "Ajoute ce colis: 8L01234567890"
 - "Suivre le colis CJ123456789FR"
 
+### Adding with Alias
+- "Add tracking number CNFR9010481599571HD as Chargeur USB"
+- "Track this package 1Z999AA10123456784 - Cadeau Maman"
+- "Ajoute le colis 8L01234567890: Vêtements"
+
+Aliases make it easier to identify parcels in the list view instead of just seeing tracking numbers.
+
 ### Checking Updates
 - "Check my parcels"
 - "Any updates on my tracking numbers?"
@@ -174,8 +191,8 @@ This skill is designed to be used directly from OpenClaw conversations. Use natu
 When triggered, execute the appropriate command:
 
 ```python
-# Add parcel
-exec(f"python3 parcel-tracker/scripts/parcel_tracker.py add '{tracking_number}'")
+# Add parcel (with optional alias)
+exec(f"python3 parcel-tracker/scripts/parcel_tracker.py add '{tracking_number}' '{alias}'")
 
 # Check updates
 exec("python3 parcel-tracker/scripts/parcel_tracker.py check")
