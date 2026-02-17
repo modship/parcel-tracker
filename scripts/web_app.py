@@ -19,7 +19,7 @@ from urllib.parse import parse_qs
 # Simple HTTP server with HTML generation
 def generate_html(title, content):
     return f"""<!DOCTYPE html>
-<html lang="fr">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -191,7 +191,7 @@ def generate_html(title, content):
     <div class="container">
         <header>
             <h1>📦 Parcel Tracker</h1>
-            <p>Suivi de colis universel avec détection automatique des transporteurs</p>
+            <p>Universal parcel tracking with automatic carrier detection</p>
         </header>
         {content}
     </div>
@@ -203,13 +203,13 @@ def get_status_class(status):
     if not status:
         return "status-pending"
     status_lower = status.lower()
-    if "delivered" in status_lower or "livré" in status_lower:
+    if "delivered" in status_lower:
         return "status-delivered"
     elif "delivering" in status_lower or "distribution" in status_lower:
         return "status-delivering"
-    elif "transit" in status_lower or "en cours" in status_lower:
+    elif "transit" in status_lower or "inbound" in status_lower or "outbound" in status_lower:
         return "status-transit"
-    elif "exception" in status_lower or "error" in status_lower:
+    elif "exception" in status_lower or "error" in status_lower or "failed" in status_lower:
         return "status-exception"
     return "status-pending"
 
