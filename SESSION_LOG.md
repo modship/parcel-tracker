@@ -66,9 +66,9 @@ crontab -e
 ```
 
 ### Current Parcels Tracked
-- 12345678901 [Book] (GLS) - Pending
-- 12345678901234 [Gift] (DPD) - Pending
 - CNFR9010481599571HD [USB Charger] (Cainiao) - Delivering
+
+*(2 parcels were removed during testing)*
 
 ### Pending Issues
 - ⚠️ OpenClaw Gateway disconnected (token mismatch)
