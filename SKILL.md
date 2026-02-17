@@ -55,6 +55,30 @@ python3 parcel-tracker/scripts/parcel_tracker.py detect <tracking_number>
 
 ✅ = Full support | 🟡 = Basic support | 🔴 = Detection only (need API key for tracking)
 
+## Web Interface
+
+A built-in web interface is available for easy management:
+
+```bash
+# Start the web server
+python3 parcel-tracker/scripts/web_app.py
+
+# Access at http://localhost:8080
+```
+
+Features:
+- 📋 View all tracked parcels with status
+- ➕ Add new parcels with aliases
+- 🗑️ Remove parcels
+- 🔄 Check for updates with one click
+- 📜 View detailed tracking history
+- 📱 Responsive design (works on mobile)
+
+### Custom Port
+```bash
+PORT=3000 python3 parcel-tracker/scripts/web_app.py
+```
+
 ## API Keys (Optional)
 
 The tracker works **without any API keys** for French and Chinese carriers. For other carriers, you can optionally add:
