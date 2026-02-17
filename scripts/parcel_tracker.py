@@ -56,6 +56,7 @@ def init_db():
         CREATE TABLE IF NOT EXISTS parcels (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             tracking_number TEXT UNIQUE NOT NULL,
+            alias TEXT,
             carrier TEXT,
             carrier_detected TEXT,
             status TEXT,
@@ -88,9 +89,20 @@ def detect_carrier(tracking_number: str) -> Optional[str]:
     tn = tracking_number.upper().replace(" ", "").replace("-", "")
     
     patterns = {
+        # DPD - Test before generic numeric patterns
+        "dpd": [
+            r"^\d{14}$",
+            r"^\d{18}$",
+        ],
+        # GLS - Test before generic numeric patterns
+        "gls": [
+            r"^\d{11,12}$",
+            r"^\d{20}$",
+        ],
         # La Poste / Colissimo (France)
         "colissimo": [
-            r"^\d{11,15}$",  # Standard domestic
+            r"^\d{13}$",  # 13 digits standard
+            r"^[A-Z0-9]{11,15}$",  # Alphanumeric (includes 8L...)
             r"^[A-Z]{2}\d{9}[A-Z]{2}$",  # International (CJ, EK, etc.)
             r"^6P\d{9}$",  # Colissimo pickups
         ],
@@ -130,16 +142,6 @@ def detect_carrier(tracking_number: str) -> Optional[str]:
         "royalmail": [
             r"^[A-Z]{2}\d{9}GB$",
             r"^\d{13}$",
-        ],
-        # DPD
-        "dpd": [
-            r"^\d{14}$",
-            r"^\d{18}$",
-        ],
-        # GLS
-        "gls": [
-            r"^\d{11,12}$",
-            r"^\d{20}$",
         ],
         # Hermes/Evri (UK)
         "evri": [
@@ -201,7 +203,9 @@ def get_carrier_display_name(carrier_code: str) -> str:
         "usps": "USPS",
         "royalmail": "Royal Mail",
         "dpd": "DPD",
+        "dpd_fr": "DPD France",
         "gls": "GLS",
+        "gls_fr": "GLS France",
         "evri": "Evri",
         "mondialrelay": "Mondial Relay",
         "inpost": "InPost",
@@ -322,6 +326,100 @@ def track_yanwen(tracking_number: str) -> Optional[Dict]:
     
     return None
 
+def track_gls(tracking_number: str) -> Optional[Dict]:
+    """
+    Track GLS parcels using the GLS France public API.
+    No API key required.
+    """
+    # GLS France tracking endpoint
+    url = f"https://gls-group.com/app/service/open/rest/FR/fr/rstt001?match={tracking_number}&caller=witt002&milis={int(datetime.now().timestamp() * 1000)}"
+    
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+        }
+        data = http_get(url, headers)
+        
+        if data and data.get("tuStatus"):
+            tu_status = data.get("tuStatus", [])
+            if tu_status and len(tu_status) > 0:
+                parcel = tu_status[0]
+                history = parcel.get("history", [])
+                
+                return {
+                    "carrier": "gls",
+                    "status": parcel.get("progressBar", {}).get("statusInfo", "Unknown"),
+                    "events": [
+                        {
+                            "date": e.get("date"),
+                            "status": e.get("evtDscr"),
+                            "location": f"{e.get('address', {}).get('city', '')}, {e.get('address', {}).get('countryName', '')}".strip(", "),
+                            "description": e.get("evtDscr"),
+                        }
+                        for e in history
+                    ],
+                }
+    except Exception as e:
+        print(f"GLS error: {e}", file=sys.stderr)
+    
+    return None
+
+def track_dpd(tracking_number: str) -> Optional[Dict]:
+    """
+    Track DPD France parcels using the DPD public API.
+    No API key required.
+    """
+    # DPD France tracking endpoint
+    url = f"https://api.dpd.fr/tracking/v1/shipments?reference={tracking_number}"
+    
+    # Alternative endpoint if the above doesn't work
+    alt_url = f"https://tracking.dpd.de/status/fr_FR/parcel/{tracking_number}"
+    
+    try:
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            "Accept": "application/json",
+        }
+        
+        # Try primary endpoint first
+        data = http_get(url, headers)
+        
+        if data and data.get("shipments"):
+            shipments = data.get("shipments", [])
+            if shipments and len(shipments) > 0:
+                shipment = shipments[0]
+                events = shipment.get("events", [])
+                
+                return {
+                    "carrier": "dpd",
+                    "status": shipment.get("status", "Unknown"),
+                    "events": [
+                        {
+                            "date": e.get("date"),
+                            "status": e.get("status"),
+                            "location": e.get("location", ""),
+                            "description": e.get("description"),
+                        }
+                        for e in events
+                    ],
+                }
+        
+        # Fallback to web scraping if API doesn't return data
+        req = urllib.request.Request(alt_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            html = resp.read().decode('utf-8', errors='ignore')
+            if "status" in html.lower() or "tracking" in html.lower():
+                return {
+                    "carrier": "dpd",
+                    "status": "Tracked (see DPD website for details)",
+                    "events": [{"date": "", "status": "Parcel found", "location": "", "description": f"Check {alt_url} for full details"}],
+                }
+    except Exception as e:
+        print(f"DPD error: {e}", file=sys.stderr)
+    
+    return None
+
 def track_with_17track(tracking_number: str, carrier: Optional[str] = None) -> Optional[Dict]:
     """
     Track parcel using 17Track API (free tier available).
@@ -432,6 +530,8 @@ def track_parcel(tracking_number: str, carrier_hint: Optional[str] = None) -> Op
         "chronopost": track_chronopost,
         "cainiao": track_cainiao,
         "yanwen": track_yanwen,
+        "gls": track_gls,
+        "dpd": track_dpd,
     }
     
     if detected and detected in trackers:
@@ -457,8 +557,8 @@ def track_parcel(tracking_number: str, carrier_hint: Optional[str] = None) -> Op
     
     return None
 
-def add_parcel(tracking_number: str) -> Tuple[bool, str]:
-    """Add a new parcel to tracking."""
+def add_parcel(tracking_number: str, alias: Optional[str] = None) -> Tuple[bool, str]:
+    """Add a new parcel to tracking with optional alias."""
     init_db()
     
     carrier = detect_carrier(tracking_number)
@@ -468,13 +568,14 @@ def add_parcel(tracking_number: str) -> Tuple[bool, str]:
     
     try:
         c.execute('''
-            INSERT INTO parcels (tracking_number, carrier_detected, status)
-            VALUES (?, ?, ?)
-        ''', (tracking_number, carrier, "Added - pending first check"))
+            INSERT INTO parcels (tracking_number, alias, carrier_detected, status)
+            VALUES (?, ?, ?, ?)
+        ''', (tracking_number, alias, carrier, "Added - pending first check"))
         conn.commit()
         
         carrier_name = get_carrier_display_name(carrier) if carrier else "Unknown"
-        return True, f"Added {tracking_number} ({carrier_name})"
+        alias_str = f" [{alias}]" if alias else ""
+        return True, f"Added {tracking_number}{alias_str} ({carrier_name})"
     except sqlite3.IntegrityError:
         return False, f"Parcel {tracking_number} is already being tracked"
     finally:
@@ -501,7 +602,7 @@ def list_parcels() -> List[Dict]:
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute('''
-        SELECT tracking_number, carrier_detected, status, last_event, last_update, destination
+        SELECT tracking_number, alias, carrier_detected, status, last_event, last_update, destination
         FROM parcels ORDER BY created_at DESC
     ''')
     
@@ -509,11 +610,12 @@ def list_parcels() -> List[Dict]:
     for row in c.fetchall():
         parcels.append({
             "tracking_number": row[0],
-            "carrier": row[1],
-            "status": row[2],
-            "last_event": row[3],
-            "last_update": row[4],
-            "destination": row[5],
+            "alias": row[1],
+            "carrier": row[2],
+            "status": row[3],
+            "last_event": row[4],
+            "last_update": row[5],
+            "destination": row[6],
         })
     
     conn.close()
@@ -528,12 +630,12 @@ def check_updates(notify: bool = True) -> List[Dict]:
     
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
-    c.execute('SELECT id, tracking_number, carrier_detected, notified_events FROM parcels')
+    c.execute('SELECT id, tracking_number, alias, carrier_detected, notified_events FROM parcels')
     
     updates = []
     
     for row in c.fetchall():
-        parcel_id, tracking_number, carrier, notified_json = row
+        parcel_id, tracking_number, alias, carrier, notified_json = row
         notified = json.loads(notified_json or "[]")
         
         result = track_parcel(tracking_number, carrier)
@@ -547,6 +649,7 @@ def check_updates(notify: bool = True) -> List[Dict]:
                 updates.append({
                     "parcel_id": parcel_id,
                     "tracking_number": tracking_number,
+                    "alias": alias,
                     "carrier": result.get("carrier", carrier),
                     "status": result.get("status"),
                     "event": latest,
@@ -588,11 +691,11 @@ def main():
         print("Usage: parcel_tracker.py <command> [args]")
         print("")
         print("Commands:")
-        print("  add <tracking_number>     Add a parcel to track")
-        print("  remove <tracking_number>  Remove a parcel")
-        print("  list                      List all tracked parcels")
-        print("  check                     Check for updates")
-        print("  detect <tracking_number>  Detect carrier from tracking number")
+        print("  add <tracking_number> [alias]  Add a parcel to track (with optional alias)")
+        print("  remove <tracking_number>       Remove a parcel")
+        print("  list                           List all tracked parcels")
+        print("  check                          Check for updates")
+        print("  detect <tracking_number>       Detect carrier from tracking number")
         print("")
         sys.exit(1)
     
@@ -600,9 +703,12 @@ def main():
     
     if command == "add":
         if len(sys.argv) < 3:
-            print("Usage: parcel_tracker.py add <tracking_number>")
+            print("Usage: parcel_tracker.py add <tracking_number> [alias]")
+            print("Example: parcel_tracker.py add 1Z999AA10123456784 'Cadeau Maman'")
             sys.exit(1)
-        success, msg = add_parcel(sys.argv[2])
+        tracking_number = sys.argv[2]
+        alias = " ".join(sys.argv[3:]) if len(sys.argv) > 3 else None
+        success, msg = add_parcel(tracking_number, alias)
         print(msg)
         sys.exit(0 if success else 1)
     
@@ -619,13 +725,14 @@ def main():
         if not parcels:
             print("No parcels being tracked")
         else:
-            print(f"{'Tracking #':<20} {'Carrier':<20} {'Status':<30} {'Last Update'}")
-            print("-" * 90)
+            print(f"{'Tracking #':<22} {'Alias':<20} {'Carrier':<18} {'Status':<28} {'Last Update'}")
+            print("-" * 110)
             for p in parcels:
                 carrier = get_carrier_display_name(p["carrier"]) if p["carrier"] else "Unknown"
-                status = (p["status"] or "Pending")[:28]
+                status = (p["status"] or "Pending")[:26]
                 last = p["last_update"] or "Never"
-                print(f"{p['tracking_number']:<20} {carrier:<20} {status:<30} {last}")
+                alias = (p["alias"] or "")[:18]
+                print(f"{p['tracking_number']:<22} {alias:<20} {carrier:<18} {status:<28} {last}")
         sys.exit(0)
     
     elif command == "check":
@@ -634,7 +741,8 @@ def main():
             print(f"Found {len(updates)} update(s):")
             for u in updates:
                 carrier = get_carrier_display_name(u["carrier"]) if u["carrier"] else "Unknown"
-                print(f"\n📦 {u['tracking_number']} ({carrier})")
+                alias_str = f" [{u['alias']}]" if u.get("alias") else ""
+                print(f"\n📦 {u['tracking_number']}{alias_str} ({carrier})")
                 print(f"   Status: {u['status']}")
                 print(f"   Event: {u['event'].get('description')}")
                 print(f"   Location: {u['event'].get('location', 'N/A')}")
