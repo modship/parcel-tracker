@@ -1,6 +1,14 @@
 ---
 name: parcel-tracker
 description: Universal parcel/package tracking with automatic carrier detection. Use when the user wants to track shipments, add tracking numbers, check delivery status, or set up automatic tracking notifications. Triggers include phrases like "track package", "add tracking number", "check my parcel", "where is my order", "suivre un colis", "ajouter un numéro de suivi", "où est mon colis", "track my order", "list my parcels", "check tracking updates". Supports La Poste/Colissimo, Chronopost, Cainiao/AliExpress, UPS, FedEx, DHL, USPS, Royal Mail, DPD, GLS, Yanwen, and more. Uses FREE APIs only - no paid APIs required.
+metadata:
+  {
+    "openclaw":
+      {
+        "requires": { "bins": ["python3"] },
+        "install": [],
+      },
+  }
 ---
 
 # Parcel Tracker
