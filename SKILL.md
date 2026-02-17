@@ -97,7 +97,9 @@ Get free API keys:
 
 ## Automatic Notifications
 
-Set up a cron job to check for updates:
+Notifications are sent via **OpenClaw channels** (Telegram, WhatsApp, Signal, etc.) when parcel updates are detected.
+
+### System Cron (Recommended)
 
 ```bash
 # Edit crontab
@@ -107,12 +109,14 @@ crontab -e
 0 */2 * * * cd ~/.openclaw/workspace && python3 parcel-tracker/scripts/check_and_notify.py >> ~/.openclaw/workspace/parcel-tracker/data/cron.log 2>&1
 ```
 
-Or with OpenClaw (when gateway is connected):
+### OpenClaw Cron (When Gateway Connected)
 
 ```bash
 openclaw cron add --name parcel-tracker --schedule "every 2 hours" \
-  --command "python3 parcel-tracker/scripts/check_and_notify.py"
+  --command "cd ~/.openclaw/workspace && python3 parcel-tracker/scripts/check_and_notify.py"
 ```
+
+**Note:** Notifications require a connected OpenClaw Gateway with configured channels (Telegram, WhatsApp, etc.)
 
 ## Commands
 

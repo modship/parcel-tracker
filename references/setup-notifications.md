@@ -1,10 +1,10 @@
 # Parcel Tracker - Notification Setup
 
+Notifications are sent via **OpenClaw channels** (Telegram, WhatsApp, Signal, Discord, etc.) when parcel updates are detected.
+
 ## Setup Cron Job for Automatic Updates
 
-To receive automatic notifications when parcels are updated, set up a cron job:
-
-### Option 1: Using System Cron (Recommended)
+### Option 1: System Cron (Recommended)
 
 ```bash
 # Edit crontab
@@ -13,16 +13,18 @@ crontab -e
 # Add this line to check every 2 hours
 0 */2 * * * cd ~/.openclaw/workspace && python3 parcel-tracker/scripts/check_and_notify.py >> ~/.openclaw/workspace/parcel-tracker/data/cron.log 2>&1
 
-# Or every hour during business hours (9-18)
+# Or every hour during business hours (9-18, Mon-Fri)
 0 9-18 * * 1-5 cd ~/.openclaw/workspace && python3 parcel-tracker/scripts/check_and_notify.py >> ~/.openclaw/workspace/parcel-tracker/data/cron.log 2>&1
 ```
 
-### Option 2: Using OpenClaw Cron (When Gateway Available)
+### Option 2: OpenClaw Cron (When Gateway Connected)
 
 ```bash
 openclaw cron add --name "parcel-tracker" --schedule "every 2 hours" \
-  --command "python3 parcel-tracker/scripts/check_and_notify.py"
+  --command "cd ~/.openclaw/workspace && python3 parcel-tracker/scripts/check_and_notify.py"
 ```
+
+**Requirements:** OpenClaw Gateway must be connected with configured channels (Telegram bot, WhatsApp, etc.)
 
 ### Option 3: Manual Check
 
